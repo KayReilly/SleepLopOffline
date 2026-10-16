@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#080b10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SleepLog">
+  <meta name="description" content="Личный дневник сна, работающий офлайн">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./static/icon.svg">
+  <link rel="stylesheet" href="./static/style.css">
+  <title>SleepLog — дневник сна</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">☾</div>
+      <div>
+        <p class="eyebrow">ТВОЙ ЛИЧНЫЙ ДНЕВНИК</p>
+        <h1>Sleep<span>Log</span></h1>
+      </div>
+      <div class="offline-pill"><span></span> Офлайн</div>
+    </header>
+
+    <section class="welcome">
+      <p class="eyebrow" id="today-label">ТВОЙ РИТМ</p>
+      <h2 id="greeting">Спокойной ночи</h2>
+      <p class="subtle">Все записи сохраняются на этом iPhone.</p>
+    </section>
+
+    <section class="hero-card">
+      <div class="moon-art" aria-hidden="true"><div class="moon"></div><i class="star s1">✦</i><i class="star s2">✧</i><i class="star s3">·</i></div>
+      <p class="eyebrow" id="session-label">СЕГОДНЯ</p>
+      <div class="timer" id="timer">00:00:00</div>
+      <p class="subtle" id="session-status">Сон ещё не начат</p>
+      <button id="sleep-button" class="primary-button">☾ Начать сон</button>
+      <p class="tiny-note">Не закрывай запись вручную — нажми кнопку после пробуждения.</p>
+    </section>
+
+    <section class="stats-grid" aria-label="Статистика сна">
+      <article class="stat-card"><span class="stat-icon">☾</span><p>Всего сна</p><strong id="total-stat">0 ч 0 мин</strong><small>за всё время</small></article>
+      <article class="stat-card"><span class="stat-icon">✦</span><p>За 7 дней</p><strong id="week-stat">0 ч 0 мин</strong><small>последние 7 дней</small></article>
+    </section>
+
+    <section class="section-card">
+      <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНЯЯ НЕДЕЛЯ</p><h3>Твой сон</h3></div><span class="chart-caption">часы</span></div>
+      <div id="week-chart" class="week-chart" aria-label="График продолжительности сна"></div>
+    </section>
+
+    <section class="section-card history-section">
+      <div class="section-heading"><div><p class="eyebrow">ТВОИ ЗАПИСИ</p><h3>История сна</h3></div><button id="export-button" class="text-button">Экспорт</button></div>
+      <div id="history-list" class="history-list"></div>
+      <p id="empty-history" class="empty-state">Здесь появятся твои записи после первого сна 🌙</p>
+      <button id="clear-button" class="clear-button">Очистить всю историю</button>
+    </section>
+
+    <footer>SleepLog · локальное хранение · без аккаунта</footer>
+  </main>
+  <script src="./static/app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service Worker:", err)));
+    }
+  </script>
+</body>
+</html>
