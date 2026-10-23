@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#080b10">
+  <meta name="theme-color" content="#0b0b14">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SleepLog">
@@ -17,15 +17,15 @@
 <body>
 <main class="app-shell">
   <header class="topbar">
-    <div class="brand-mark" aria-hidden="true">☾</div>
+    <div class="brand-mark" aria-hidden="true"><span>☾</span></div>
     <div class="brand-copy"><p class="eyebrow">ТВОЙ ЛИЧНЫЙ ДНЕВНИК</p><h1>Sleep<span>Log</span></h1></div>
-    <div class="offline-pill"><span></span> Офлайн</div>
+    <div class="offline-pill"><span></span> Локально</div>
   </header>
 
   <section class="welcome">
     <p class="eyebrow" id="today-label">ТВОЙ РИТМ</p>
     <h2 id="greeting">Спокойной ночи</h2>
-    <p class="subtle">Мягкий контроль сна — все данные остаются на устройстве.</p>
+    <p class="subtle">Твой ритм. Твоя статистика. Всё хранится на iPhone.</p>
   </section>
 
   <nav class="tabs" aria-label="Разделы приложения">
@@ -36,7 +36,7 @@
 
   <section class="tab-panel" id="panel-sleep">
     <section class="hero-card">
-      <div class="moon-art" aria-hidden="true"><div class="moon"></div><i class="star s1">✦</i><i class="star s2">✧</i><i class="star s3">·</i></div>
+      <div class="moon-art" aria-hidden="true"><div class="moon-orbit orbit-one"></div><div class="moon-orbit orbit-two"></div><div class="moon"></div><i class="star s1">✦</i><i class="star s2">✧</i><i class="star s3">·</i></div>
       <p class="eyebrow" id="session-label">СЕГОДНЯ</p>
       <div class="timer" id="timer">00:00:00</div>
       <p class="subtle" id="session-status">Сон ещё не начат</p>
@@ -44,10 +44,18 @@
       <p class="tiny-note">Таймер считает время между началом и завершением записи.</p>
     </section>
     <section class="section-card alarm-card">
-      <div class="section-heading"><div><p class="eyebrow">АВТОЗАВЕРШЕНИЕ</p><h3>Время пробуждения</h3></div><span class="alarm-icon">◷</span></div>
-      <div class="alarm-row"><label for="wake-time">Будильник iPhone</label><input id="wake-time" type="time" value="07:00" step="60"></div>
-      <p class="tiny-note">Установи такой же будильник в приложении «Часы». SleepLog не может прочитать системный будильник. Если приложение было закрыто, запись завершится указанным временем при следующем открытии.</p>
-      <div id="alarm-status" class="notice">Автозавершение включено на 07:00.</div>
+      <div class="section-heading"><div><p class="eyebrow">ТВОЙ ПЛАН НА НОЧЬ</p><h3>Автозавершение</h3></div><span class="alarm-icon">◷</span></div>
+      <label class="toggle-row" for="auto-enabled">
+        <span class="toggle-copy"><strong>Завершать автоматически</strong><small>Выбери своё время перед сном</small></span>
+        <input id="auto-enabled" class="switch-input" type="checkbox" checked>
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <div class="wake-picker">
+        <div><label for="wake-time">Время завершения</label><p>Например, когда планируешь встать</p></div>
+        <input id="wake-time" type="time" value="07:00" step="60">
+      </div>
+      <div id="alarm-status" class="notice">Автозавершение включено. Время можно менять каждую ночь.</div>
+      <p class="tiny-note">SleepLog не управляет будильником iPhone. Если приложение закрыто, оно проверит расписание при следующем открытии и завершит запись задним числом.</p>
     </section>
     <section class="section-card quality-card">
       <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНИЙ РЕЗУЛЬТАТ</p><h3>Качество сна</h3></div><span class="quality-icon">✦</span></div>

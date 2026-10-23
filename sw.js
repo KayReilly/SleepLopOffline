@@ -1,4 +1,4 @@
-const CACHE_NAME = "sleeplog-offline-v3";
+const CACHE_NAME = "sleeplog-offline-v4";
 const APP_FILES = [
   "./",
   "./index.html",
