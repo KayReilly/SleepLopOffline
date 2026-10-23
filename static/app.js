@@ -1,164 +1,45 @@
 (() => {
-  "use strict";
-  const STORAGE_KEY = "sleeplog-offline-v1";
-  const $ = id => document.getElementById(id);
-  let data = loadData();
-  let tickHandle = null;
-
-  function loadData() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      return {
-        active: parsed.active && parsed.active.startedAt ? parsed.active : null,
-        history: Array.isArray(parsed.history) ? parsed.history.filter(x => x && x.id && x.startedAt && x.endedAt) : []
-      };
-    } catch {
-      return { active: null, history: [] };
-    }
-  }
-
-  function saveData() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      return true;
-    } catch (error) {
-      alert("Не удалось сохранить данные на телефоне. Проверь свободное место и настройки браузера.");
-      console.error(error);
-      return false;
-    }
-  }
-
-  const pad = n => String(n).padStart(2, "0");
-  function dateFrom(value) { return new Date(value); }
-  function durationMs(start, end = Date.now()) {
-    return Math.max(0, dateFrom(start).getTime() <= end ? end - dateFrom(start).getTime() : 0);
-  }
-  function parts(ms) {
-    const minutes = Math.floor(ms / 60000);
-    return { hours: Math.floor(minutes / 60), minutes: minutes % 60, totalMinutes: minutes };
-  }
-  function formatDuration(ms) {
-    const p = parts(ms);
-    return `${p.hours} ч ${p.minutes} мин`;
-  }
-  function formatTimer(ms) {
-    const sec = Math.floor(ms / 1000);
-    return `${pad(Math.floor(sec / 3600))}:${pad(Math.floor(sec / 60) % 60)}:${pad(sec % 60)}`;
-  }
-  function formatDate(value) {
-    return dateFrom(value).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-  }
-  function formatTime(value) {
-    return dateFrom(value).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  }
-  function safeText(value) {
-    return String(value).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-  }
-
-  function completedDuration(entry) {
-    return durationMs(entry.startedAt, dateFrom(entry.endedAt).getTime());
-  }
-  function getWeekDays() {
-    const days = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      days.push(d);
-    }
-    return days;
-  }
-  function durationForDay(entry, dayStart, dayEnd) {
-    const a = Math.max(dateFrom(entry.startedAt).getTime(), dayStart.getTime());
-    const b = Math.min(dateFrom(entry.endedAt).getTime(), dayEnd.getTime());
-    return Math.max(0, b - a);
-  }
-  function renderChart() {
-    const days = getWeekDays();
-    const entries = [...data.history];
-    const max = Math.max(8 * 3600000, ...days.map(day => {
-      const end = new Date(day); end.setDate(end.getDate() + 1);
-      return entries.reduce((sum, entry) => sum + durationForDay(entry, day, end), 0);
-    }));
-    $("week-chart").innerHTML = days.map((day, index) => {
-      const end = new Date(day); end.setDate(end.getDate() + 1);
-      const ms = entries.reduce((sum, entry) => sum + durationForDay(entry, day, end), 0);
-      const height = Math.max(ms > 0 ? 4 : 2, Math.min(100, ms / max * 100));
-      const label = day.toLocaleDateString("ru-RU", { weekday: "short" }).replace(".", "");
-      return `<div class="chart-day"><span class="bar-hours">${ms ? (ms / 3600000).toLocaleString("ru-RU", { maximumFractionDigits: 1 }) : "—"}</span><div class="bar-track"><div class="bar ${index === 6 ? "today" : ""}" style="height:${height}%"></div></div><span class="bar-label">${safeText(label)}</span></div>`;
-    }).join("");
-  }
-  function renderHistory() {
-    const list = $("history-list");
-    const entries = [...data.history].sort((a, b) => dateFrom(b.startedAt) - dateFrom(a.startedAt));
-    $("empty-history").hidden = entries.length > 0;
-    list.innerHTML = entries.slice(0, 100).map(entry => `
-      <article class="history-item">
-        <div class="history-moon">☾</div>
-        <div class="history-info">
-          <div class="history-date">${safeText(formatDate(entry.startedAt))}</div>
-          <div class="history-time">${safeText(formatTime(entry.startedAt))} — ${safeText(formatTime(entry.endedAt))}</div>
-        </div>
-        <div class="history-duration">${safeText(formatDuration(completedDuration(entry)))}</div>
-        <button class="delete-button" data-delete="${safeText(entry.id)}" aria-label="Удалить запись" title="Удалить">×</button>
-      </article>`).join("");
-    list.querySelectorAll("[data-delete]").forEach(button => button.addEventListener("click", () => {
-      if (!confirm("Удалить эту запись сна?")) return;
-      data.history = data.history.filter(item => item.id !== button.dataset.delete);
-      saveData(); render();
-    }));
-  }
-  function renderStats() {
-    const total = data.history.reduce((sum, entry) => sum + completedDuration(entry), 0);
-    const weekStart = new Date(); weekStart.setHours(0,0,0,0); weekStart.setDate(weekStart.getDate() - 6);
-    const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate() + 1); weekEnd.setHours(0,0,0,0);
-    const week = data.history.reduce((sum, entry) => sum + durationForDay(entry, weekStart, weekEnd), 0);
-    $("total-stat").textContent = formatDuration(total);
-    $("week-stat").textContent = formatDuration(week);
-  }
-  function renderActive() {
-    const button = $("sleep-button");
-    const active = Boolean(data.active);
-    $("session-label").textContent = active ? "ЗАПИСЬ ИДЁТ" : "СЕГОДНЯ";
-    $("session-status").textContent = active ? `Начало: ${formatDate(data.active.startedAt)} в ${formatTime(data.active.startedAt)}` : "Сон ещё не начат";
-    button.textContent = active ? "✓ Завершить сон" : "☾ Начать сон";
-    button.classList.toggle("stop", active);
-    $("timer").textContent = active ? formatTimer(durationMs(data.active.startedAt)) : "00:00:00";
-  }
-  function render() {
-    const now = new Date();
-    $("today-label").textContent = now.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" }).toUpperCase();
-    $("greeting").textContent = now.getHours() >= 5 && now.getHours() < 12 ? "Доброе утро" : now.getHours() >= 18 || now.getHours() < 5 ? "Спокойной ночи" : "Время отдохнуть";
-    renderActive(); renderStats(); renderChart(); renderHistory();
-  }
-  $("sleep-button").addEventListener("click", () => {
-    if (!data.active) {
-      data.active = { startedAt: new Date().toISOString() };
-      if (!saveData()) { data.active = null; return; }
-    } else {
-      const endedAt = new Date().toISOString();
-      if (dateFrom(endedAt) <= dateFrom(data.active.startedAt)) return;
-      data.history.push({ id: (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`), startedAt: data.active.startedAt, endedAt });
-      data.active = null;
-      if (!saveData()) { data.active = { startedAt: data.history[data.history.length - 1].startedAt }; data.history.pop(); return; }
-    }
-    render();
-  });
-  $("clear-button").addEventListener("click", () => {
-    if (!data.history.length) { alert("История уже пустая."); return; }
-    if (!confirm("Точно удалить всю историю сна? Это действие нельзя отменить.")) return;
-    data.history = [];
-    saveData(); render();
-  });
-  $("export-button").addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), ...data }, null, 2)], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `sleeplog-backup-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-  });
-  render();
-  tickHandle = setInterval(() => { if (data.active) renderActive(); }, 1000);
-  window.addEventListener("pageshow", render);
+"use strict";
+const STORAGE_KEY="sleeplog-offline-v1", WAKE_KEY="sleeplog-wake-time-v1", DB_NAME="sleeplog-audio-v1", DB_STORE="recordings";
+const $=id=>document.getElementById(id);
+let data=loadData(), tickHandle=null, mediaRecorder=null, mediaStream=null, audioChunks=[], recordStarted=0, recordTick=null;
+function loadData(){try{const p=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");return {active:p.active&&p.active.startedAt?p.active:null,history:Array.isArray(p.history)?p.history.filter(x=>x&&x.id&&x.startedAt&&x.endedAt):[]};}catch{return {active:null,history:[]};}}
+function saveData(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));return true;}catch(e){alert("Не удалось сохранить данные. Проверь свободное место на устройстве.");console.error(e);return false;}}
+function getWakeTime(){return localStorage.getItem(WAKE_KEY)||"07:00";}
+function scheduledWake(startedAt,wakeTime=getWakeTime()){const [h,m]=wakeTime.split(":").map(Number),d=new Date(startedAt);d.setHours(h||0,m||0,0,0);if(d.getTime()<=date(startedAt).getTime())d.setDate(d.getDate()+1);return d;}
+function finishActive(endDate,automatic=false){if(!data.active)return false;const start=date(data.active.startedAt),end=date(endDate);if(!Number.isFinite(start.getTime())||!Number.isFinite(end.getTime())||end<=start){data.active=null;saveData();render();return false;}const entry={id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,startedAt:data.active.startedAt,endedAt:end.toISOString(),autoEnded:Boolean(automatic),wakeTime:data.active.wakeTime||getWakeTime()};data.history.push(entry);data.active=null;if(!saveData()){data.history.pop();data.active={startedAt:entry.startedAt,wakeTime:entry.wakeTime,wakeAt:scheduledWake(entry.startedAt,entry.wakeTime).toISOString()};return false;}render();return true;}
+function checkAutoFinish(){if(!data.active)return;const wakeAt=data.active.wakeAt?date(data.active.wakeAt):scheduledWake(data.active.startedAt,data.active.wakeTime||getWakeTime());if(Date.now()>=wakeAt.getTime()){finishActive(wakeAt,true);$("alarm-status").textContent=`Запись автоматически завершена в ${timeLabel(wakeAt)} по расписанию.`;}}
+const pad=n=>String(n).padStart(2,"0"), date=v=>new Date(v), msDuration=(s,e=Date.now())=>Math.max(0,date(s).getTime()<=e?e-date(s).getTime():0);
+function parts(ms){let m=Math.floor(ms/60000);return {hours:Math.floor(m/60),minutes:m%60,totalMinutes:m};}
+function duration(ms){let p=parts(ms);return `${p.hours} ч ${p.minutes} мин`;}
+function timer(ms){let s=Math.floor(ms/1000);return `${pad(Math.floor(s/3600))}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`;}
+function shortTimer(ms){let s=Math.floor(ms/1000);return `${pad(Math.floor(s/60))}:${pad(s%60)}`;}
+function dateLabel(v){return date(v).toLocaleDateString("ru-RU",{day:"numeric",month:"long"});}
+function timeLabel(v){return date(v).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});}
+function safe(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function entryDuration(e){return msDuration(e.startedAt,date(e.endedAt).getTime());}
+function daysBack(n){const out=[],today=new Date();today.setHours(0,0,0,0);for(let i=n-1;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);out.push(d);}return out;}
+function durationForDay(e,start,end){return Math.max(0,Math.min(date(e.endedAt).getTime(),end.getTime())-Math.max(date(e.startedAt).getTime(),start.getTime()));}
+function dailyTotal(day){const end=new Date(day);end.setDate(end.getDate()+1);return data.history.reduce((sum,e)=>sum+durationForDay(e,day,end),0);}
+function renderChart(targetId,count){const days=daysBack(count),values=days.map(d=>dailyTotal(d)),max=Math.max(8*3600000,...values);$(targetId).innerHTML=days.map((d,i)=>{const ms=values[i],height=ms?Math.max(4,ms/max*100):2,label=d.toLocaleDateString("ru-RU",{weekday:"short"}).replace(".","");return `<div class="chart-day"><span class="bar-hours">${ms?(ms/3600000).toLocaleString("ru-RU",{maximumFractionDigits:1}):"—"}</span><div class="bar-track"><div class="bar ${i===days.length-1?"today":""}" style="height:${height}%"></div></div><span class="bar-label">${safe(count===14?d.getDate():label)}</span></div>`;}).join("");}
+function renderHistory(){const list=$("history-list"),entries=[...data.history].sort((a,b)=>date(b.startedAt)-date(a.startedAt));$("empty-history").hidden=entries.length>0;list.innerHTML=entries.slice(0,100).map(e=>`<article class="history-item"><div class="history-moon">☾</div><div class="history-info"><div class="history-date">${safe(dateLabel(e.startedAt))}</div><div class="history-time">${safe(timeLabel(e.startedAt))} — ${safe(timeLabel(e.endedAt))}</div></div><div class="history-duration">${safe(duration(entryDuration(e)))}</div><button class="delete-button" data-delete="${safe(e.id)}" aria-label="Удалить запись">×</button></article>`).join("");list.querySelectorAll("[data-delete]").forEach(b=>b.addEventListener("click",()=>{if(!confirm("Удалить эту запись сна?"))return;data.history=data.history.filter(e=>e.id!==b.dataset.delete);saveData();render();}));}
+function renderStats(){const total=data.history.reduce((s,e)=>s+entryDuration(e),0),days=daysBack(7),week=days.reduce((s,d)=>s+dailyTotal(d),0);$("total-stat").textContent=duration(total);$("week-stat").textContent=duration(week);const avg=data.history.length?total/data.history.length:0;$("average-stat").textContent=data.history.length?duration(avg):"—";const recent=data.history.filter(e=>date(e.endedAt)>=days[0]).sort((a,b)=>date(a.startedAt)-date(b.startedAt));$("count-stat").textContent=recent.length;const averageTime=items=>{if(!items.length)return "—";let mins=items.reduce((s,e)=>{let d=date(e.startedAt);return s+d.getHours()*60+d.getMinutes();},0)/items.length;return `${pad(Math.floor(mins/60)%24)}:${pad(Math.round(mins%60))}`;};$("bedtime-stat").textContent=averageTime(recent);$("wake-stat").textContent=averageTime(recent.map(e=>({...e,startedAt:e.endedAt})));$("longest-stat").textContent=data.history.length?duration(Math.max(...data.history.map(entryDuration))):"—";renderChart("week-chart",7);renderChart("trend-chart",14);
+const latest=[...data.history].sort((a,b)=>date(b.endedAt)-date(a.endedAt))[0];$("latest-summary").innerHTML=latest?`<div class="summary-duration">${safe(duration(entryDuration(latest)))}</div><p class="subtle">${safe(dateLabel(latest.startedAt))} · ${safe(timeLabel(latest.startedAt))} — ${safe(timeLabel(latest.endedAt))}</p>`:'Заверши первую запись сна, чтобы увидеть итог.';renderQuality(latest);}
+function renderQuality(entry){const el=$("sleep-quality");if(!entry){el.className="quality-result";el.innerHTML='<strong>Пока нет оценки</strong><p class="subtle">Заверши первую запись сна, чтобы увидеть результат.</p>';return;}const ms=entryDuration(entry),hours=ms/3600000;let label,kind,note;if(hours<6){label="Недостаточный сон";kind="short";note="Продолжительность значительно ниже рекомендуемых 8–10 часов для подростков. Постарайся дать себе больше времени на сон.";}else if(hours<8){label="Сна могло быть мало";kind="short";note="Для подростков обычно рекомендуют 8–10 часов сна. Если можешь, попробуй лечь раньше.";}else if(hours<=10){label="Хороший сон ✨";kind="good";note="По продолжительности ты попал в ориентир 8–10 часов. Самочувствие тоже важно.";}else{label="Долгий сон";kind="long";note="Сегодня сна больше 10 часов. Это не обязательно плохо: потребность может меняться после недосыпа или нагрузки.";}el.className=`quality-result ${kind}`;el.innerHTML=`<strong>${label}</strong><p class="quality-duration">${safe(duration(ms))}</p><p class="quality-note">${note}</p>${entry.autoEnded?'<p class="quality-note">Запись завершена автоматически по расписанию пробуждения.</p>':''}`;}
+function renderActive(){const active=Boolean(data.active);$("session-label").textContent=active?"ЗАПИСЬ ИДЁТ":"СЕГОДНЯ";$("session-status").textContent=active?`Начало: ${dateLabel(data.active.startedAt)} в ${timeLabel(data.active.startedAt)}`:"Сон ещё не начат";$("sleep-button").textContent=active?"✓ Завершить сон":"☾ Начать сон";$("sleep-button").classList.toggle("stop",active);$("timer").textContent=active?timer(msDuration(data.active.startedAt)):"00:00:00";}
+function render(){const now=new Date();$("today-label").textContent=now.toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}).toUpperCase();$("greeting").textContent=now.getHours()>=5&&now.getHours()<12?"Доброе утро":now.getHours()>=18||now.getHours()<5?"Спокойной ночи":"Время отдохнуть";renderActive();renderStats();renderHistory();}
+$("sleep-button").addEventListener("click",()=>{if(!data.active){const startedAt=new Date().toISOString(),wakeTime=getWakeTime(),wakeAt=scheduledWake(startedAt,wakeTime);data.active={startedAt,wakeTime,wakeAt:wakeAt.toISOString()};if(!saveData()){data.active=null;return;}$("alarm-status").textContent=`Автозавершение запланировано на ${timeLabel(wakeAt)}.`;render();}else{finishActive(new Date(),false);}});
+$("wake-time").value=getWakeTime();
+$("alarm-status").textContent=data.active?`Автозавершение запланировано на ${timeLabel(data.active.wakeAt||scheduledWake(data.active.startedAt,data.active.wakeTime||getWakeTime()))}.`:`Автозавершение включено на ${getWakeTime()}. Установи такое же время в приложении «Часы».`;
+$("wake-time").addEventListener("change",()=>{const value=$("wake-time").value;if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(value))return;try{localStorage.setItem(WAKE_KEY,value);}catch(e){}if(data.active){data.active.wakeTime=value;data.active.wakeAt=scheduledWake(data.active.startedAt,value).toISOString();saveData();$("alarm-status").textContent=`Автозавершение запланировано на ${timeLabel(data.active.wakeAt)}.`;}else{$("alarm-status").textContent=`Автозавершение включено на ${value}. Установи такое же время в приложении «Часы».`;} });
+$("clear-button").addEventListener("click",()=>{if(!data.history.length){alert("История уже пустая.");return;}if(!confirm("Точно удалить всю историю сна? Это действие нельзя отменить."))return;data.history=[];saveData();render();});
+$("export-button").addEventListener("click",()=>{const blob=new Blob([JSON.stringify({exportedAt:new Date().toISOString(),...data},null,2)],{type:"application/json;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`sleeplog-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);});
+document.querySelectorAll("[data-tab]").forEach(btn=>btn.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(b=>b.classList.toggle("active",b===btn));["sleep","stats","sounds"].forEach(name=>{$("panel-"+name).hidden=name!==btn.dataset.tab;});}));
+function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(DB_STORE))req.result.createObjectStore(DB_STORE,{keyPath:"id"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+async function dbPut(item){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).put(item);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function dbAll(){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,"readonly"),req=tx.objectStore(DB_STORE).getAll();req.onsuccess=()=>{db.close();resolve(req.result||[]);};req.onerror=()=>{db.close();reject(req.error);};});}
+async function dbDelete(id){const db=await openDB();return new Promise((resolve,reject)=>{const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).delete(id);tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+async function renderAudio(){try{const items=(await dbAll()).sort((a,b)=>b.createdAt-a.createdAt);$("empty-audio").hidden=items.length>0;$("audio-list").innerHTML=items.map(a=>`<article class="audio-item"><div class="audio-info"><strong>${safe(new Date(a.createdAt).toLocaleString("ru-RU"))}</strong><small>${safe(shortTimer(a.duration||0))} · ${safe(a.type||"аудио")}</small><audio controls preload="none" src="${URL.createObjectURL(a.blob)}"></audio></div><button class="delete-button" data-audio-delete="${safe(a.id)}" aria-label="Удалить аудио">×</button></article>`).join("");$("audio-list").querySelectorAll("[data-audio-delete]").forEach(b=>b.addEventListener("click",async()=>{if(!confirm("Удалить эту аудиозапись?"))return;await dbDelete(b.dataset.audioDelete);renderAudio();}));}catch(e){$("mic-status").textContent="Локальное хранилище аудио недоступно в этом браузере.";}}
+$("record-button").addEventListener("click",async()=>{if(mediaRecorder&&mediaRecorder.state==="recording"){mediaRecorder.stop();return;}if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){$("mic-status").textContent="Этот браузер не поддерживает запись аудио. Открой приложение в Safari по HTTPS.";return;}try{mediaStream=await navigator.mediaDevices.getUserMedia({audio:true});audioChunks=[];const options=MediaRecorder.isTypeSupported("audio/webm;codecs=opus")?{mimeType:"audio/webm;codecs=opus"}:{};mediaRecorder=new MediaRecorder(mediaStream,options);recordStarted=Date.now();mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size)audioChunks.push(e.data);};mediaRecorder.onstop=async()=>{const blob=new Blob(audioChunks,{type:mediaRecorder.mimeType||"audio/webm"});mediaStream?.getTracks().forEach(t=>t.stop());mediaStream=null;clearInterval(recordTick);$("record-timer").textContent=shortTimer(Date.now()-recordStarted);$("record-button").textContent="● Начать запись звука";$("record-button").classList.remove("stop");if(blob.size){try{await dbPut({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),createdAt:recordStarted,duration:Date.now()-recordStarted,type:blob.type,blob});$("mic-status").textContent=`Запись сохранена локально (${(blob.size/1024/1024).toFixed(1)} МБ).`;await renderAudio();}catch(e){$("mic-status").textContent="Не удалось сохранить аудио: возможно, не хватает места.";}}};mediaRecorder.start(1000);$("mic-status").textContent="Микрофон активен. Не закрывай приложение во время записи."; $("record-button").textContent="■ Остановить и сохранить";$("record-button").classList.add("stop");recordTick=setInterval(()=>$("record-timer").textContent=shortTimer(Date.now()-recordStarted),500);}catch(e){$("mic-status").textContent=e.name==="NotAllowedError"?"Нет доступа к микрофону. Разреши его в настройках браузера.":"Не удалось запустить микрофон. Проверь разрешения и HTTPS.";console.warn(e);}});
+checkAutoFinish();render();renderAudio();tickHandle=setInterval(()=>{if(data.active){checkAutoFinish();if(data.active)renderActive();}},1000);window.addEventListener("pageshow",()=>{checkAutoFinish();render();});document.addEventListener("visibilitychange",()=>{if(!document.hidden){checkAutoFinish();render();}});
 })();

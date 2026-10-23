@@ -2,7 +2,7 @@
   "id": "./",
   "name": "SleepLog — дневник сна",
   "short_name": "SleepLog",
-  "description": "Личный дневник сна, работающий офлайн",
+  "description": "Дневник сна, расширенная статистика и локальная запись звуков",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

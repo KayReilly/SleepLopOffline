@@ -15,55 +15,112 @@
   <title>SleepLog — дневник сна</title>
 </head>
 <body>
-  <main class="app-shell">
-    <header class="topbar">
-      <div class="brand-mark" aria-hidden="true">☾</div>
-      <div>
-        <p class="eyebrow">ТВОЙ ЛИЧНЫЙ ДНЕВНИК</p>
-        <h1>Sleep<span>Log</span></h1>
-      </div>
-      <div class="offline-pill"><span></span> Офлайн</div>
-    </header>
+<main class="app-shell">
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true">☾</div>
+    <div class="brand-copy"><p class="eyebrow">ТВОЙ ЛИЧНЫЙ ДНЕВНИК</p><h1>Sleep<span>Log</span></h1></div>
+    <div class="offline-pill"><span></span> Офлайн</div>
+  </header>
 
-    <section class="welcome">
-      <p class="eyebrow" id="today-label">ТВОЙ РИТМ</p>
-      <h2 id="greeting">Спокойной ночи</h2>
-      <p class="subtle">Все записи сохраняются на этом iPhone.</p>
-    </section>
+  <section class="welcome">
+    <p class="eyebrow" id="today-label">ТВОЙ РИТМ</p>
+    <h2 id="greeting">Спокойной ночи</h2>
+    <p class="subtle">Мягкий контроль сна — все данные остаются на устройстве.</p>
+  </section>
 
+  <nav class="tabs" aria-label="Разделы приложения">
+    <button class="tab active" data-tab="sleep">Сон</button>
+    <button class="tab" data-tab="stats">Статистика</button>
+    <button class="tab" data-tab="sounds">Звуки</button>
+  </nav>
+
+  <section class="tab-panel" id="panel-sleep">
     <section class="hero-card">
       <div class="moon-art" aria-hidden="true"><div class="moon"></div><i class="star s1">✦</i><i class="star s2">✧</i><i class="star s3">·</i></div>
       <p class="eyebrow" id="session-label">СЕГОДНЯ</p>
       <div class="timer" id="timer">00:00:00</div>
       <p class="subtle" id="session-status">Сон ещё не начат</p>
       <button id="sleep-button" class="primary-button">☾ Начать сон</button>
-      <p class="tiny-note">Не закрывай запись вручную — нажми кнопку после пробуждения.</p>
+      <p class="tiny-note">Таймер считает время между началом и завершением записи.</p>
     </section>
-
-    <section class="stats-grid" aria-label="Статистика сна">
+    <section class="section-card alarm-card">
+      <div class="section-heading"><div><p class="eyebrow">АВТОЗАВЕРШЕНИЕ</p><h3>Время пробуждения</h3></div><span class="alarm-icon">◷</span></div>
+      <div class="alarm-row"><label for="wake-time">Будильник iPhone</label><input id="wake-time" type="time" value="07:00" step="60"></div>
+      <p class="tiny-note">Установи такой же будильник в приложении «Часы». SleepLog не может прочитать системный будильник. Если приложение было закрыто, запись завершится указанным временем при следующем открытии.</p>
+      <div id="alarm-status" class="notice">Автозавершение включено на 07:00.</div>
+    </section>
+    <section class="section-card quality-card">
+      <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНИЙ РЕЗУЛЬТАТ</p><h3>Качество сна</h3></div><span class="quality-icon">✦</span></div>
+      <div id="sleep-quality" class="quality-result"><strong>Пока нет оценки</strong><p class="subtle">Заверши первую запись сна, чтобы увидеть результат.</p></div>
+    </section>
+    <section class="stats-grid" aria-label="Краткая статистика">
       <article class="stat-card"><span class="stat-icon">☾</span><p>Всего сна</p><strong id="total-stat">0 ч 0 мин</strong><small>за всё время</small></article>
-      <article class="stat-card"><span class="stat-icon">✦</span><p>За 7 дней</p><strong id="week-stat">0 ч 0 мин</strong><small>последние 7 дней</small></article>
+      <article class="stat-card"><span class="stat-icon">✦</span><p>Последние 7 дней</p><strong id="week-stat">0 ч 0 мин</strong><small>суммарно</small></article>
     </section>
-
     <section class="section-card">
-      <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНЯЯ НЕДЕЛЯ</p><h3>Твой сон</h3></div><span class="chart-caption">часы</span></div>
+      <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНЯЯ НЕДЕЛЯ</p><h3>Ритм сна</h3></div><span class="chart-caption">часы</span></div>
       <div id="week-chart" class="week-chart" aria-label="График продолжительности сна"></div>
     </section>
-
+    <section class="section-card">
+      <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНЯЯ ЗАПИСЬ</p><h3>Итог ночи</h3></div></div>
+      <div id="latest-summary" class="summary-empty">Заверши первую запись сна, чтобы увидеть итог.</div>
+    </section>
     <section class="section-card history-section">
       <div class="section-heading"><div><p class="eyebrow">ТВОИ ЗАПИСИ</p><h3>История сна</h3></div><button id="export-button" class="text-button">Экспорт</button></div>
       <div id="history-list" class="history-list"></div>
       <p id="empty-history" class="empty-state">Здесь появятся твои записи после первого сна 🌙</p>
       <button id="clear-button" class="clear-button">Очистить всю историю</button>
     </section>
+  </section>
 
-    <footer>SleepLog · локальное хранение · без аккаунта</footer>
-  </main>
-  <script src="./static/app.js"></script>
-  <script>
-    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service Worker:", err)));
-    }
-  </script>
+  <section class="tab-panel" id="panel-stats" hidden>
+    <section class="stats-grid">
+      <article class="stat-card"><span class="stat-icon">◷</span><p>Средняя ночь</p><strong id="average-stat">—</strong><small>по завершённым записям</small></article>
+      <article class="stat-card"><span class="stat-icon">◎</span><p>Среднее время подъёма</p><strong id="wake-stat">—</strong><small>за последние 7 ночей</small></article>
+    </section>
+    <section class="section-card">
+      <div class="section-heading"><div><p class="eyebrow">ПОСЛЕДНИЕ 14 ДНЕЙ</p><h3>Продолжительность</h3></div><span class="chart-caption">часы</span></div>
+      <div id="trend-chart" class="trend-chart"></div>
+    </section>
+    <section class="section-card">
+      <div class="section-heading"><div><p class="eyebrow">РЕГУЛЯРНОСТЬ</p><h3>Твой режим</h3></div></div>
+      <div class="metric-row"><span>Среднее время засыпания</span><strong id="bedtime-stat">—</strong></div>
+      <div class="metric-row"><span>Самая длинная запись</span><strong id="longest-stat">—</strong></div>
+      <div class="metric-row"><span>Записей за 7 дней</span><strong id="count-stat">0</strong></div>
+      <p class="tiny-note">Показатели описывают записи дневника, а не медицинскую оценку сна.</p>
+    </section>
+    <section class="section-card">
+      <div class="section-heading"><div><p class="eyebrow">ФАЗЫ СНА</p><h3>Что можно узнать</h3></div></div>
+      <p class="subtle">По длительности сна и звуку нельзя надёжно определить лёгкий, глубокий и REM-сон. Для реальных фаз нужен совместимый датчик или данные Apple Health. Мы не будем подменять измерения выдуманным графиком.</p>
+      <div class="notice">Фазы сна — следующий этап, когда подключим достоверный источник данных.</div>
+    </section>
+  </section>
+
+  <section class="tab-panel" id="panel-sounds" hidden>
+    <section class="section-card sound-intro">
+      <div class="sound-symbol">♫</div>
+      <p class="eyebrow">ЗВУКОВОЙ ДНЕВНИК</p>
+      <h3>Звуки во время сна</h3>
+      <p class="subtle">Запускай запись вручную перед сном. Запись работает, пока страница приложения активна; iOS может приостановить микрофон при блокировке экрана.</p>
+      <div id="mic-status" class="notice">Микрофон не активен. Разрешение запрашивается только после нажатия кнопки.</div>
+      <button id="record-button" class="primary-button">● Начать запись звука</button>
+      <p id="record-timer" class="record-timer">00:00</p>
+    </section>
+    <section class="section-card">
+      <div class="section-heading"><div><p class="eyebrow">ЛОКАЛЬНО НА УСТРОЙСТВЕ</p><h3>Аудиозаписи</h3></div></div>
+      <div id="audio-list" class="audio-list"></div>
+      <p id="empty-audio" class="empty-state">Сохранённых аудиозаписей пока нет.</p>
+      <p class="tiny-note">Аудио может занимать много места. Удаляй ненужные записи. Экспорт JSON не включает аудиофайлы.</p>
+    </section>
+  </section>
+
+  <footer>SleepLog · локальное хранение · без аккаунта</footer>
+</main>
+<script src="./static/app.js"></script>
+<script>
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(err => console.warn("Service Worker:", err)));
+}
+</script>
 </body>
 </html>
